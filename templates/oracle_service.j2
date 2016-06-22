@@ -1,0 +1,46 @@
+#!/bin/sh
+#
+# chkconfig: 2345 99 99
+# description: Oracle auto start-stop script.
+
+export ORACLE_HOME={{ oracle_home_db }}
+export ORACLE_HOME_LISTENER=$ORACLE_HOME
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib
+#export JAVA_HOME=$ORACLE_HOME/jdk
+export PATH=$PATH:$ORACLE_HOME/bin:$JAVA_HOME/bin
+export ORACLE_SID={{ item.oracle_db_name }}
+export ORACLE_TRACE=Y
+
+export PATH=$JAVA_HOME/bin:$ORACLE_HOME/bin:$PATH
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# See how we were called.
+case "$1" in
+  start)
+        echo "1" > /proc/sys/net/ipv4/ip_forward
+
+        # Route 80 -> 8888 for XDB
+        iptables -t nat -A PREROUTING -m tcp  -p tcp --dport 80 -j REDIRECT --to-port 8888
+        iptables -t nat -A PREROUTING -m tcp  -p tcp --dport 21 -j REDIRECT --to-port 2121
+
+        su  oracle -c "$ORACLE_HOME/bin/dbstart $ORACLE_HOME"
+        $ORACLE_HOME/bin/lsnrctl status
+        ;;
+  stop)
+        su  oracle -c "$ORACLE_HOME/bin/dbshut $ORACLE_HOME"
+        echo "Oracle was successfully shut down"
+        ;;
+  restart|reload)
+        su  oracle -c "$ORACLE_HOME/bin/dbshut $ORACLE_HOME"
+        su  oracle -c "$ORACLE_HOME/bin/dbstart $ORACLE_HOME"
+        $ORACLE_HOME/bin/lsnrctl status
+        ;;
+  status)
+        $ORACLE_HOME/bin/lsnrctl status
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|reload}"
+        exit 1
+esac
