@@ -2,10 +2,10 @@
   template: src=oracle_service.j2 dest=/etc/init.d/oracle mode=750 backup=no
   when: master_node and oracle_install_option_gi == 'none'
   tags: oracle_service
-  with_items: oracle_databases
-  sudo: true
+  with_items: "{{oracle_databases}}"  
+  become: true
 
 - name: orasvc | Enable Oracle Service
   service: name=oracle enabled=yes state=started
   tags: oracle_service
-  sudo: true
+  become: true
